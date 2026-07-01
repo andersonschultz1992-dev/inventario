@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventário de Hosts · ECER & DCPER</title>
+  <meta name="description" content="Consulta, gestão e análise do inventário de servidores de produção">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="src/styles/main.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%233FA110'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'>H</text></svg>">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-mark">▦</div>
+        <div>
+          <h1>Inventário de Hosts</h1>
+          <span class="brand-sub">ECER · DCPER — Produção</span>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <span id="mode-badge" class="mode-badge" title="Fonte de dados"></span>
+        <button id="btn-export" class="btn btn-ghost" title="Exportar dados filtrados em CSV">⬇ CSV</button>
+        <button id="btn-add" class="btn btn-primary hidden">+ Novo host</button>
+        <button id="btn-auth" class="btn btn-outline">Entrar</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Cards de indicadores -->
+    <section id="kpi-cards" class="kpi-grid" aria-label="Indicadores"></section>
+
+    <!-- Gráficos -->
+    <section class="charts-grid">
+      <div class="panel"><h2>Hosts por tecnologia</h2><div class="chart-box"><canvas id="chart-tec"></canvas></div></div>
+      <div class="panel"><h2>Hosts por versão de SO</h2><div class="chart-box"><canvas id="chart-so"></canvas></div></div>
+      <div class="panel"><h2>Por família de SO</h2><div class="chart-box"><canvas id="chart-familia"></canvas></div></div>
+      <div class="panel"><h2>Top 10 domínios</h2><div class="chart-box"><canvas id="chart-dom"></canvas></div></div>
+    </section>
+
+    <!-- Filtros -->
+    <section class="panel filters-panel">
+      <div class="filters-row">
+        <input id="f-busca" type="search" placeholder="Buscar hostname…" autocomplete="off">
+        <select id="f-time"><option value="">Time: todos</option></select>
+        <select id="f-tec"><option value="">Tecnologia: todas</option></select>
+        <select id="f-dominio"><option value="">Domínio: todos</option></select>
+        <select id="f-so"><option value="">Versão SO: todas</option></select>
+        <select id="f-familia"><option value="">Família SO: todas</option></select>
+        <select id="f-java"><option value="">Java: todas</option></select>
+        <select id="f-situacao"><option value="">Situação: todas</option></select>
+        <button id="btn-limpar" class="btn btn-ghost">Limpar</button>
+      </div>
+      <div id="filter-summary" class="filter-summary"></div>
+    </section>
+
+    <!-- Tabela -->
+    <section class="panel">
+      <div class="table-wrap">
+        <table id="hosts-table">
+          <thead>
+            <tr>
+              <th data-sort="hostname">Hostname</th>
+              <th data-sort="time">Time</th>
+              <th data-sort="dominio">Domínio</th>
+              <th>Tecnologias</th>
+              <th data-sort="versao_so">SO</th>
+              <th data-sort="release">Release</th>
+              <th data-sort="versao_java">Java</th>
+              <th data-sort="situacao">Situação</th>
+              <th class="col-actions"></th>
+            </tr>
+          </thead>
+          <tbody id="hosts-tbody"></tbody>
+        </table>
+      </div>
+      <div class="table-footer">
+        <span id="table-count"></span>
+        <div class="pager">
+          <button id="pg-prev" class="btn btn-ghost">‹</button>
+          <span id="pg-info"></span>
+          <button id="pg-next" class="btn btn-ghost">›</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">Inventário de máquinas · infraestrutura — aplicações core e crédito</footer>
+
+  <!-- Modal: formulário de host -->
+  <div id="modal-host" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-head"><h2 id="modal-host-title">Novo host</h2><button class="modal-close" data-close>×</button></div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <label>Hostname *<input id="h-hostname" required placeholder="app1exemplo001p"></label>
+          <label>Time *<select id="h-time"></select></label>
+          <label>Domínio<div class="combo"><input id="h-dominio" list="dl-dominios" placeholder="ex: osbadm_domain"><datalist id="dl-dominios"></datalist></div></label>
+          <label>Negócio<div class="combo"><input id="h-negocio" list="dl-negocios" placeholder="ex: Crédito"><datalist id="dl-negocios"></datalist></div></label>
+          <label>Tecnologias<div class="combo"><input id="h-tec" list="dl-tecs" placeholder="separe por vírgula"><datalist id="dl-tecs"></datalist></div></label>
+          <label>Versão do SO<input id="h-versao-so" list="dl-so" placeholder="RedHat-8.10"><datalist id="dl-so"></datalist></label>
+          <label>Família do SO<select id="h-tipo-so"><option value="">—</option><option>RHEL</option><option>CentOS</option><option>Rocky</option><option>Outro</option></select></label>
+          <label>Release<input id="h-release" placeholder="WLS 12.2"></label>
+          <label>Versão Java<input id="h-java" placeholder="JDK 8"></label>
+          <label>Ambiente<select id="h-ambiente"><option>PROD</option><option>NPROD</option><option>HOM</option><option>DEV</option></select></label>
+          <label>Situação<select id="h-situacao"><option>Ligado</option><option>Desligado</option><option>Removido</option><option>Remover (validar)</option></select></label>
+          <label>Criticidade<select id="h-criticidade"><option value="">—</option><option>Alta</option><option>Média</option><option>Baixa</option></select></label>
+          <label class="span-2">Observação<textarea id="h-obs" rows="2"></textarea></label>
+        </div>
+        <p id="form-error" class="form-error hidden"></p>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" data-close>Cancelar</button>
+        <button id="btn-save-host" class="btn btn-primary">Salvar host</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: autenticação -->
+  <div id="modal-auth" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card modal-sm">
+      <div class="modal-head"><h2>Acesso restrito</h2><button class="modal-close" data-close>×</button></div>
+      <div class="modal-body">
+        <p class="muted">Somente usuários autenticados podem adicionar, editar ou remover hosts.</p>
+        <label>E-mail<input id="auth-email" type="email" autocomplete="email"></label>
+        <label>Senha<input id="auth-pass" type="password" autocomplete="current-password"></label>
+        <p id="auth-error" class="form-error hidden"></p>
+      </div>
+      <div class="modal-foot">
+        <button id="btn-signup" class="btn btn-ghost">Criar conta</button>
+        <button id="btn-login" class="btn btn-primary">Entrar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
