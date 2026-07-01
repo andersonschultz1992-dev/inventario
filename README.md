@@ -159,3 +159,15 @@ Ideias já suportadas pela arquitetura:
 5. **Coleta automática** — job (GitHub Actions ou Rundeck) que consulta Ansible/Satellite/Dynatrace e faz upsert via API do Supabase, eliminando atualização manual.
 6. **Dashboards por time no Grafana** — o PostgreSQL do Supabase pode ser plugado como datasource direto no Grafana.
 7. **SSO corporativo** — Supabase Auth suporta SAML/OIDC (Azure AD) nos planos pagos.
+
+---
+
+## Changelog
+
+### v2 — Mobile + visual premium
+- Layout mobile-first: tabela vira lista de cards no celular, modais viram bottom-sheet, filtros empilham, KPIs em 2 colunas
+- Alvos de toque ≥44px, inputs com 16px (elimina auto-zoom do Safari iOS), safe-area insets (notch), `overflow-x` eliminado
+- Fundo vivo em canvas: rede de nós conectados nas cores Sicredi — pausa com aba oculta, ~30fps, respeita `prefers-reduced-motion`, fallback em gradiente estático
+- Painéis com glassmorphism leve (`backdrop-filter` com fallback sólido via `@supports`)
+- Gráficos adaptados a telas estreitas (legenda embaixo, labels truncados, menos ticks)
+- **Bugfix**: `setupAuthUi()` não era chamado — o botão Entrar não abria o modal de login no modo Supabase
