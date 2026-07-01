@@ -50,17 +50,18 @@ export function renderTable(rows, { editable, deletable }) {
     return `<span class="badge ${cls}" title="${soRisk(v) === 'eol' ? 'Fora de suporte' : soRisk(v) === 'warn' ? 'Extended Life-cycle Support' : 'Suportado'}">${escapeHtml(v)}</span>`;
   };
 
+  // data-label alimenta o modo "cards" no mobile (CSS ::before)
   document.getElementById('hosts-tbody').innerHTML = slice.map(r => `
     <tr data-id="${r.id}">
-      <td class="mono"><strong>${escapeHtml(r.hostname)}</strong></td>
-      <td><span class="badge badge-neutral">${escapeHtml(r.time ?? '—')}</span></td>
-      <td class="mono">${escapeHtml(r.dominio ?? '—')}</td>
-      <td>${(r.tecnologias ?? []).map(t => `<span class="tec-tag">${escapeHtml(t)}</span>`).join('') || '—'}</td>
-      <td>${soBadge(r.versao_so)}</td>
-      <td class="mono">${escapeHtml(r.release ?? '—')}</td>
-      <td class="mono">${escapeHtml(r.versao_java ?? '—')}</td>
-      <td><span class="badge ${situacaoBadge(r.situacao)}">${escapeHtml(r.situacao ?? '—')}</span></td>
-      <td>
+      <td class="mono cell-host"><strong>${escapeHtml(r.hostname)}</strong></td>
+      <td data-label="Time"><span class="badge badge-neutral">${escapeHtml(r.time ?? '—')}</span></td>
+      <td data-label="Domínio" class="mono">${escapeHtml(r.dominio ?? '—')}</td>
+      <td data-label="Tecnologias">${(r.tecnologias ?? []).map(t => `<span class="tec-tag">${escapeHtml(t)}</span>`).join('') || '—'}</td>
+      <td data-label="SO">${soBadge(r.versao_so)}</td>
+      <td data-label="Release" class="mono">${escapeHtml(r.release ?? '—')}</td>
+      <td data-label="Java" class="mono">${escapeHtml(r.versao_java ?? '—')}</td>
+      <td data-label="Situação"><span class="badge ${situacaoBadge(r.situacao)}">${escapeHtml(r.situacao ?? '—')}</span></td>
+      <td class="cell-actions">
         <div class="row-actions">
           ${editable ? `<button class="icon-btn" data-act="edit" title="Editar">✎</button>` : ''}
           ${deletable ? `<button class="icon-btn danger" data-act="del" title="Remover">🗑</button>` : ''}
@@ -70,9 +71,10 @@ export function renderTable(rows, { editable, deletable }) {
 
   document.getElementById('hosts-tbody').querySelectorAll('button[data-act]').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      const id = Number(e.target.closest('tr').dataset.id);
+      const b = e.target.closest('button[data-act]');
+      const id = Number(b.closest('tr').dataset.id);
       const host = rows.find(r => r.id === id);
-      if (e.target.dataset.act === 'edit') onEditCb?.(host);
+      if (b.dataset.act === 'edit') onEditCb?.(host);
       else onDeleteCb?.(host);
     });
   });

@@ -8,6 +8,7 @@ import { renderKpis, renderCharts } from './components/dashboard.js';
 import { initTable, renderTable, resetPage } from './components/table.js';
 import { initHostForm, openHostForm, populateFormLookups } from './components/hostForm.js';
 import { exportCsv } from './utils/helpers.js';
+import { initBackground } from './components/background.js';
 
 let hosts = [];
 let lookups = null;
@@ -113,8 +114,10 @@ async function handleDelete(host) {
 }
 
 async function main() {
+  initBackground();
   setupModeBadge();
   setupModals();
+  setupAuthUi();   // bugfix v2: estava definido mas nunca era chamado
 
   await api.init();
   await auth.initAuth();

@@ -10,6 +10,7 @@ const charts = {};
 
 function makeChart(id, type, labels, values, opts = {}) {
   const ctx = document.getElementById(id);
+  const mobile = window.matchMedia('(max-width: 640px)').matches;
   if (charts[id]) charts[id].destroy();
   charts[id] = new Chart(ctx, {
     type,
@@ -30,17 +31,46 @@ function makeChart(id, type, labels, values, opts = {}) {
       plugins: {
         legend: {
           display: type === 'doughnut',
-          position: 'right',
-          labels: { boxWidth: 12, font: { size: 11, family: 'Inter' } },
+          position: mobile ? 'bottom' : 'right',
+          labels: { boxWidth: 12, font: { size: mobile ? 11 : 11, family: 'Inter' } },
         },
+        tooltip: { bodyFont: { size: 12 }, titleFont: { size: 12 } },
       },
       scales: type === 'doughnut' ? {} : {
-        x: { ticks: { font: { size: 10, family: 'JetBrains Mono' }, autoSkip: true, maxRotation: 45 }, grid: { display: false } },
-        y: { ticks: { font: { size: 10, family: 'JetBrains Mono' } }, grid: { color: '#E4EAE1' } },
+        x: {
+          ticks: {
+            font: { size: mobile ? 9.5 : 10, family: 'JetBrains Mono' },
+            autoSkip: true,
+            maxRotation: mobile ? 60 : 45,
+            maxTicksLimit: mobile && !opts.horizontal ? 8 : undefined,
+          },
+          grid: { display: false },
+        },
+        y: {
+          ticks: {
+            font: { size: mobile ? 9.5 : 10, family: 'JetBrains Mono' },
+            callback: opts.horizontal ? function (v) {
+              const label = this.getLabelForValue(v);
+              const max = mobile ? 14 : 22;
+              return label.length > max ? label.slice(0, max - 1) + '…' : label;
+            } : undefined,
+          },
+          grid: { color: 'rgba(198,208,196,.45)' },
+        },
       },
     },
   });
 }
+
+// Re-renderiza os gráficos quando cruza o breakpoint (rotação do celular etc.)
+let lastMobile = window.matchMedia('(max-width: 640px)').matches;
+window.addEventListener('resize', () => {
+  const nowMobile = window.matchMedia('(max-width: 640px)').matches;
+  if (nowMobile !== lastMobile) {
+    lastMobile = nowMobile;
+    document.dispatchEvent(new CustomEvent('table:refresh'));
+  }
+}, { passive: true });
 
 export function renderKpis(rows) {
   const total = rows.length;
