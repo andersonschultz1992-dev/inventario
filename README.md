@@ -1,6 +1,6 @@
 # Inventário de Hosts — Dashboard, Exploração e Topologia
 
-Aplicação estática para consulta e gestão do inventário de servidores, integrada ao Supabase. A versão 4 adiciona componentes por domínio, vertical de negócio, versões WebLogic, topologia visual e administração de associações pendentes sem recriar o banco existente. A versão 4.1 acrescenta indicadores e gráficos dinâmicos na área de exploração.
+Aplicação estática para consulta e gestão do inventário de servidores, integrada ao Supabase. A versão 4 adiciona componentes por domínio, vertical de negócio, versões WebLogic, topologia visual e administração de associações pendentes sem recriar o banco existente. A versão 4.1 acrescenta indicadores e gráficos dinâmicos na área de exploração. A versão 4.2 corrige a hierarquia da topologia para domínio → componentes e domínio → hosts, sem repetir servidores dentro de cada componente.
 
 **Stack preservada:** HTML, CSS e JavaScript ES Modules · Supabase/PostgreSQL/Auth/RLS · Chart.js · GitHub Pages. Não há dependências de runtime no npm.
 
@@ -12,7 +12,8 @@ Aplicação estática para consulta e gestão do inventário de servidores, inte
 GitHub Pages
 ├── Dashboard executivo
 ├── Exploração e CRUD de hosts
-├── Topologia domínio → componentes → hosts do domínio
+├── Topologia domínio → componentes
+│                    └→ hosts
 └── Administração de associações pendentes
               │
               ▼
@@ -21,21 +22,28 @@ Supabase
 ├── verticais_negocio
 ├── componentes
 ├── componente_tecnologias
-├── componente_hosts (associação explícita futura/manual)
+├── componente_hosts (estrutura legada preservada, não usada pela topologia)
 └── domain_component_imports (staging, auditoria e pendências)
 ```
 
 A navegação usa rotas com hash (`#/dashboard`, `#/explorar`, `#/topologia` e `#/admin`), evitando erro 404 ao atualizar a página no GitHub Pages.
 
-### Decisão sobre hosts por componente
+### Hierarquia da topologia
 
-A planilha `Componentes.xlsx` não possui uma coluna de hostname; ela informa apenas `Quantidade de hosts `. Para não criar relações falsas:
+A planilha `Componentes.xlsx` não possui uma coluna de hostname; ela informa apenas `Quantidade de hosts `. Para não criar relações falsas, a topologia usa esta estrutura:
 
-- cada componente é relacionado ao domínio;
-- a quantidade declarada é preservada no componente;
-- a topologia apresenta os hosts já vinculados ao domínio;
-- a tabela `componente_hosts` fica pronta para associações explícitas futuras;
-- a interface informa quando a lista de hosts é herdada do domínio.
+```text
+Domínio
+├── Componentes
+└── Hosts
+```
+
+- cada componente é relacionado somente ao domínio;
+- cada host é relacionado somente ao domínio;
+- os hosts aparecem uma única vez no ramo do domínio;
+- componentes não herdam nem repetem a lista de hosts;
+- a quantidade declarada da planilha continua preservada como dado de origem;
+- a tabela `componente_hosts`, caso já exista, é mantida por compatibilidade, mas não é usada pela topologia.
 
 A análise completa está em [`docs/PLANILHA_COMPONENTES_ANALISE.md`](docs/PLANILHA_COMPONENTES_ANALISE.md).
 
@@ -87,8 +95,10 @@ Cada domínio apresenta:
 - total de componentes e hosts;
 - tecnologias e versões WebLogic;
 - status de completude;
-- componentes expansíveis e hosts do domínio;
-- detalhes de ambiente, Java e sistema operacional.
+- dois ramos independentes: componentes do domínio e hosts do domínio;
+- componentes expansíveis sem repetição de servidores;
+- hosts listados uma única vez com ambiente, Java, sistema operacional e situação;
+- resumo de hosts ligados, desativados e sem status.
 
 A visualização usa acordeões e agrupamentos, evitando renderizar centenas de ícones repetidos.
 
@@ -272,17 +282,17 @@ Também é possível publicar a pasta `dist/` gerada pelo build em um workflow d
 3. **Separadores:** teste `bureau-domain`, `bureau.domain` e `bureau domain`.
 4. **Sem correspondência:** confirme status `pending` e presença em Administração.
 5. **Vários componentes:** expanda um domínio com múltiplos componentes.
-6. **Vários hosts:** expanda um componente e confira os hosts do domínio.
+6. **Vários hosts:** expanda um domínio e confirme que os hosts aparecem uma única vez no ramo “Hosts do domínio”.
 7. **Dashboard:** valide KPIs e todos os oito gráficos.
 8. **Navegação:** clique em uma barra de domínio e confirme o filtro em Explorar.
-9. **Topologia:** teste expansão de domínio, componente e abertura de host.
+9. **Topologia:** teste os ramos independentes de componentes e hosts, a expansão de componente e a abertura de host.
 10. **Permissões:** valide viewer, editor e admin.
 11. **Responsividade:** Safari no iPhone e Chrome no Android, retrato e paisagem.
 12. **GitHub Pages:** abra diretamente uma URL com `#/topologia` e atualize a página.
 
 ---
 
-## Arquivos principais das versões 4 e 4.1
+## Arquivos principais das versões 4, 4.1 e 4.2
 
 ### Criados
 
