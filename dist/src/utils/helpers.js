@@ -152,12 +152,44 @@ export function debounce(fn, ms = 250) {
   };
 }
 
+export function hostActivity(hostOrStatus) {
+  const status = normText(typeof hostOrStatus === 'object' ? hostOrStatus?.situacao : hostOrStatus);
+  if (!status) return 'sem_status';
+  if (status === 'ligado' || status === 'ativo' || status === 'online') return 'ligado';
+  if (['desligado', 'desativado', 'inativo', 'offline', 'removido'].includes(status) || status.startsWith('remover')) return 'desativado';
+  return 'sem_status';
+}
+
+export function hostActivityLabel(activity) {
+  return ({ ligado: 'Ligados', desativado: 'Desativados', sem_status: 'Sem status' })[activity] ?? 'Sem status';
+}
+
+// Classificação conservadora baseada na família/versão principal.
+// RHEL 7 fica separado como suporte estendido, e não é somado ao EOL definitivo.
 export function soRisk(versaoSo) {
   if (!versaoSo) return 'neutral';
-  const v = versaoSo.toLowerCase();
-  if (v.startsWith('redhat-5') || v.startsWith('redhat-6') || v.startsWith('centos')) return 'eol';
-  if (v.startsWith('redhat-7')) return 'warn';
-  return 'ok';
+  const value = normText(versaoSo);
+  const major = Number(value.match(/\b(\d{1,2})(?:\D|$)/)?.[1]);
+
+  if (/\b(?:redhat|red hat|rhel)\b/.test(value)) {
+    if (!Number.isFinite(major)) return 'neutral';
+    if (major <= 6) return 'eol';
+    if (major === 7) return 'warn';
+    return major >= 8 ? 'ok' : 'neutral';
+  }
+  if (/\bcentos\b/.test(value)) {
+    if (!Number.isFinite(major)) return 'neutral';
+    return major <= 8 ? 'eol' : 'ok';
+  }
+  if (/\brocky\b/.test(value)) {
+    if (!Number.isFinite(major)) return 'neutral';
+    return major >= 8 ? 'ok' : 'eol';
+  }
+  return 'neutral';
+}
+
+export function soRiskLabel(risk) {
+  return ({ ok: 'Suportado', warn: 'Suporte estendido', eol: 'Fora de suporte', neutral: 'Não classificado' })[risk] ?? 'Não classificado';
 }
 
 export function situacaoBadge(s) {

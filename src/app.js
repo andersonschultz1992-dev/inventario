@@ -2,6 +2,7 @@ import * as api from './services/api.js';
 import * as auth from './services/auth.js';
 import { initFilters, applyFilters, populateFilters, renderSummary, clearAll, setFilters } from './components/filters.js';
 import { renderDashboard } from './components/dashboard.js';
+import { renderExploreAnalytics } from './components/exploreAnalytics.js';
 import { initTable, renderTable, resetPage } from './components/table.js';
 import { initHostForm, openHostForm, populateFormLookups } from './components/hostForm.js';
 import { initTopology, renderTopology } from './components/topology.js';
@@ -36,6 +37,7 @@ function pendingCount() {
 
 function renderExplore() {
   const rows = currentRows();
+  renderExploreAnalytics(rows, hosts.length, filters => setFilters(filters));
   renderTable(rows, { editable: auth.canEdit(), deletable: auth.canDelete() });
   renderSummary(rows.length, hosts.length);
 }
@@ -167,7 +169,7 @@ function setupNavigation() {
     document.querySelectorAll('[data-route]').forEach(link => link.classList.toggle('active', link.dataset.route === route));
     $('context-actions').classList.toggle('hidden', route !== 'explorar');
     if (route === 'explorar') {
-      const accepted = ['busca', 'time', 'tecnologia', 'dominio', 'componente', 'vertical', 'weblogic', 'so', 'familia', 'java', 'ambiente', 'situacao'];
+      const accepted = ['busca', 'time', 'tecnologia', 'dominio', 'componente', 'vertical', 'weblogic', 'so', 'familia', 'java', 'ambiente', 'situacao', 'atividade', 'saude_so'];
       setFilters(Object.fromEntries(accepted.map(key => [key, params[key] ?? ''])), false);
       resetPage();
     }

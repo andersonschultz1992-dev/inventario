@@ -1,17 +1,17 @@
-import { debounce, escapeHtml, countBy, searchRows } from '../utils/helpers.js';
+import { debounce, escapeHtml, countBy, searchRows, hostActivity, soRisk } from '../utils/helpers.js';
 
 export const VAZIO = '__vazio__';
 
 const state = {
   busca: '', time: '', tecnologia: '', dominio: '', componente: '', vertical: '',
-  weblogic: '', so: '', familia: '', java: '', ambiente: '', situacao: '',
+  weblogic: '', so: '', familia: '', java: '', ambiente: '', situacao: '', atividade: '', saude_so: '',
 };
 
 const controls = {
   busca: 'f-busca', time: 'f-time', tecnologia: 'f-tec', dominio: 'f-dominio',
   componente: 'f-componente', vertical: 'f-vertical', weblogic: 'f-weblogic',
   so: 'f-so', familia: 'f-familia', java: 'f-java', ambiente: 'f-ambiente',
-  situacao: 'f-situacao',
+  situacao: 'f-situacao', atividade: 'f-atividade', saude_so: 'f-saude-so',
 };
 
 let onChangeCallback = null;
@@ -24,11 +24,15 @@ export function describeFilters() {
     busca: 'busca', time: 'time', tecnologia: 'tecnologia', dominio: 'domínio',
     componente: 'componente', vertical: 'vertical', weblogic: 'WebLogic',
     so: 'versão SO', familia: 'família SO', java: 'Java', ambiente: 'ambiente',
-    situacao: 'situação',
+    situacao: 'situação', atividade: 'estado operacional', saude_so: 'saúde do SO',
+  };
+  const displayValues = {
+    atividade: { ligado: 'Ligados', desativado: 'Desativados', sem_status: 'Sem status' },
+    saude_so: { ok: 'Suportado', warn: 'Suporte estendido', eol: 'Fora de suporte', neutral: 'Não classificado' },
   };
   return Object.entries(state)
     .filter(([, value]) => value)
-    .map(([key, value]) => `${labels[key]}: ${value === VAZIO ? '(não informado)' : value}`);
+    .map(([key, value]) => `${labels[key]}: ${value === VAZIO ? '(não informado)' : (displayValues[key]?.[value] ?? value)}`);
 }
 
 function fieldMatch(value, filter) {
@@ -55,7 +59,9 @@ export function applyFilters(rows) {
     && fieldMatch(row.tipo_so, state.familia)
     && fieldMatch(row.versao_java, state.java)
     && fieldMatch(row.ambiente, state.ambiente)
-    && fieldMatch(row.situacao, state.situacao));
+    && fieldMatch(row.situacao, state.situacao)
+    && (!state.atividade || hostActivity(row) === state.atividade)
+    && (!state.saude_so || soRisk(row.versao_so) === state.saude_so));
   return searchRows(structured, state.busca);
 }
 

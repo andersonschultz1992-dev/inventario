@@ -1,6 +1,6 @@
 # Inventário de Hosts — Dashboard, Exploração e Topologia
 
-Aplicação estática para consulta e gestão do inventário de servidores, integrada ao Supabase. A versão 4 adiciona componentes por domínio, vertical de negócio, versões WebLogic, topologia visual e administração de associações pendentes sem recriar o banco existente.
+Aplicação estática para consulta e gestão do inventário de servidores, integrada ao Supabase. A versão 4 adiciona componentes por domínio, vertical de negócio, versões WebLogic, topologia visual e administração de associações pendentes sem recriar o banco existente. A versão 4.1 acrescenta indicadores e gráficos dinâmicos na área de exploração.
 
 **Stack preservada:** HTML, CSS e JavaScript ES Modules · Supabase/PostgreSQL/Auth/RLS · Chart.js · GitHub Pages. Não há dependências de runtime no npm.
 
@@ -62,9 +62,22 @@ Preserva o CRUD existente e adiciona filtros por:
 
 - domínio, componente, host, tecnologia e vertical;
 - versão WebLogic, Java e sistema operacional;
-- família do sistema operacional, ambiente, time e situação.
+- família do sistema operacional, ambiente, time e situação;
+- estado operacional: ligados, desativados e sem status;
+- saúde do SO: suportado, suporte estendido, fora de suporte e não classificado.
 
-A busca global cobre todos esses campos. CSV, PNG e PDF respeitam os filtros atuais.
+A área recalcula, a cada filtro, os KPIs e gráficos de hosts ligados/desativados, saúde do SO, hosts por domínio e versões de SO. Os cards e gráficos são clicáveis e aplicam o filtro correspondente. CSV, PNG e PDF respeitam os filtros atuais e o relatório usa os gráficos da própria visão filtrada.
+
+### Critério de ciclo de vida do SO
+
+A classificação é derivada da versão cadastrada no host:
+
+- `RHEL 5/6` e `CentOS 7/8`: fora de suporte;
+- `RHEL 7`: suporte estendido/atenção;
+- `RHEL 8/9` e `Rocky Linux 8+`: suportado;
+- família ou versão desconhecida: não classificado.
+
+Essa melhoria é somente de frontend e não exige nova migration no Supabase.
 
 ### Topologia
 
@@ -269,7 +282,7 @@ Também é possível publicar a pasta `dist/` gerada pelo build em um workflow d
 
 ---
 
-## Arquivos principais da versão 4
+## Arquivos principais das versões 4 e 4.1
 
 ### Criados
 
@@ -283,10 +296,12 @@ Também é possível publicar a pasta `dist/` gerada pelo build em um workflow d
 - `scripts/build.mjs`
 - `src/router.js`
 - `src/components/topology.js`
+- `src/components/exploreAnalytics.js`
 - `src/components/admin.js`
 - `src/utils/technologyIcons.js`
 - `tests/normalization.test.mjs`
 - `tests/data.test.mjs`
+- `tests/risk.test.mjs`
 - `package.json`
 
 ### Alterados

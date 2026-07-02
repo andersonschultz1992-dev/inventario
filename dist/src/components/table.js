@@ -1,4 +1,4 @@
-import { escapeHtml, soRisk, situacaoBadge } from '../utils/helpers.js';
+import { escapeHtml, soRisk, soRiskLabel, situacaoBadge } from '../utils/helpers.js';
 
 const PAGE_SIZE = 25;
 let page = 1;
@@ -26,6 +26,7 @@ export function resetPage() { page = 1; }
 
 function valueForSort(row, key) {
   if (key === 'component_count') return Number(row.component_count ?? 0);
+  if (key === 'so_health') return soRisk(row.versao_so);
   return (row[key] ?? '').toString().toLowerCase();
 }
 
@@ -44,16 +45,20 @@ export function renderTable(rows, { editable, deletable }) {
     header.classList.toggle('desc', header.dataset.sort === sortKey && sortDesc);
   });
 
+  const riskCss = { ok: 'badge-so-ok', warn: 'badge-so-warn', eol: 'badge-so-eol', neutral: 'badge-neutral' };
   const soBadge = value => {
     if (!value) return '<span class="badge badge-neutral">—</span>';
     const risk = soRisk(value);
-    const css = { ok: 'badge-so-ok', warn: 'badge-so-warn', eol: 'badge-so-eol', neutral: 'badge-neutral' }[risk];
-    return `<span class="badge ${css}">${escapeHtml(value)}</span>`;
+    return `<span class="badge ${riskCss[risk]}">${escapeHtml(value)}</span>`;
+  };
+  const soHealthBadge = value => {
+    const risk = soRisk(value);
+    return `<span class="badge ${riskCss[risk]}">${escapeHtml(soRiskLabel(risk))}</span>`;
   };
 
   const tbody = document.getElementById('hosts-tbody');
   if (!visible.length) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="11"><div class="empty-state">
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="12"><div class="empty-state">
       <div class="empty-icon">⌕</div><p><strong>Nenhum host encontrado.</strong></p>
       <p class="muted">Ajuste a busca ou <button type="button" class="link-btn" id="empty-limpar">limpe os filtros</button>.</p>
     </div></td></tr>`;
@@ -69,6 +74,7 @@ export function renderTable(rows, { editable, deletable }) {
         <td data-label="Tecnologias">${(row.tecnologias ?? []).slice(0, 3).map(item => `<span class="tec-tag">${escapeHtml(item)}</span>`).join('') || '—'}${(row.tecnologias ?? []).length > 3 ? `<span class="tec-more">+${row.tecnologias.length - 3}</span>` : ''}</td>
         <td data-label="WebLogic" class="mono">${escapeHtml((row.versoes_weblogic ?? []).join(', ') || '—')}</td>
         <td data-label="SO">${soBadge(row.versao_so)}</td>
+        <td data-label="Saúde SO">${soHealthBadge(row.versao_so)}</td>
         <td data-label="Java" class="mono">${escapeHtml(row.versao_java ?? '—')}</td>
         <td data-label="Situação"><span class="badge ${situacaoBadge(row.situacao)}">${escapeHtml(row.situacao ?? '—')}</span></td>
         <td class="cell-actions"><div class="row-actions">

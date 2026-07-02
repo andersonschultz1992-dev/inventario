@@ -91,9 +91,25 @@
           <label><span>Java</span><select id="f-java"><option value="">Todas</option></select></label>
           <label><span>Ambiente</span><select id="f-ambiente"><option value="">Todos</option></select></label>
           <label><span>Status</span><select id="f-situacao"><option value="">Todos</option></select></label>
+          <label><span>Estado operacional</span><select id="f-atividade"><option value="">Todos</option><option value="ligado">Ligados</option><option value="desativado">Desativados</option><option value="sem_status">Sem status</option></select></label>
+          <label><span>Saúde do SO</span><select id="f-saude-so"><option value="">Todas</option><option value="ok">Suportado</option><option value="warn">Suporte estendido</option><option value="eol">Fora de suporte</option><option value="neutral">Não classificado</option></select></label>
           <button id="btn-limpar" class="btn btn-ghost filter-clear">Limpar filtros</button>
         </div>
         <div id="filter-summary" class="filter-summary"></div>
+      </section>
+
+      <section class="explore-insights" aria-label="Indicadores e gráficos da visão filtrada">
+        <header class="explore-insights-head">
+          <div><span class="eyebrow">Visão filtrada</span><h2>Indicadores operacionais</h2></div>
+          <p id="explore-insights-summary">Os gráficos acompanham os filtros aplicados.</p>
+        </header>
+        <section id="explore-kpis" class="kpi-grid explore-kpi-grid" aria-label="Indicadores filtrados"></section>
+        <section class="charts-grid explore-charts">
+          <article class="panel chart-panel"><header><div><span class="eyebrow">Disponibilidade</span><h2>Hosts ligados e desativados</h2></div></header><div class="chart-box"><canvas id="explore-chart-activity"></canvas><div class="chart-empty hidden">Sem dados para os filtros atuais.</div></div><p class="chart-note">Desativados reúne Desligado, Removido e Remover (validar).</p></article>
+          <article class="panel chart-panel"><header><div><span class="eyebrow">Risco tecnológico</span><h2>Saúde dos sistemas operacionais</h2></div></header><div class="chart-box"><canvas id="explore-chart-so-health"></canvas><div class="chart-empty hidden">Sem dados para os filtros atuais.</div></div><p class="chart-note">RHEL 7 é sinalizado como suporte estendido; versões encerradas ficam em fora de suporte.</p></article>
+          <article class="panel chart-panel"><header><div><span class="eyebrow">Distribuição</span><h2>Hosts por domínio</h2></div></header><div class="chart-box chart-tall"><canvas id="explore-chart-domain"></canvas><div class="chart-empty hidden">Sem dados para os filtros atuais.</div></div></article>
+          <article class="panel chart-panel"><header><div><span class="eyebrow">Ciclo de vida</span><h2>Versões de sistema operacional</h2></div></header><div class="chart-box chart-tall"><canvas id="explore-chart-so-version"></canvas><div class="chart-empty hidden">Sem dados para os filtros atuais.</div></div></article>
+        </section>
       </section>
 
       <section class="panel inventory-panel">
@@ -102,7 +118,7 @@
             <thead><tr>
               <th data-sort="hostname">Hostname</th><th data-sort="time">Time</th><th data-sort="dominio">Domínio</th>
               <th data-sort="vertical_negocio">Vertical</th><th data-sort="component_count">Componentes</th>
-              <th>Tecnologias</th><th>WebLogic</th><th data-sort="versao_so">SO</th>
+              <th>Tecnologias</th><th>WebLogic</th><th data-sort="versao_so">SO</th><th data-sort="so_health">Saúde SO</th>
               <th data-sort="versao_java">Java</th><th data-sort="situacao">Situação</th><th class="col-actions"></th>
             </tr></thead>
             <tbody id="hosts-tbody"></tbody>

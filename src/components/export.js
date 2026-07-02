@@ -9,9 +9,9 @@
 // html2canvas e jsPDF são carregados sob demanda (lazy) para
 // não pesar o carregamento inicial, importante no mobile.
 // ============================================================
-import { escapeHtml, soRisk, situacaoBadge } from '../utils/helpers.js';
+import { escapeHtml, hostActivity, soRisk, soRiskLabel, situacaoBadge } from '../utils/helpers.js';
 import { describeFilters } from './filters.js';
-import { getChartImages } from './dashboard.js';
+import { getExploreChartImages } from './exploreAnalytics.js';
 
 const CDN = {
   html2canvas: 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js',
@@ -48,14 +48,14 @@ export function exportFilename(ext) {
 
 function kpiHtml(rows) {
   const total = rows.length;
-  const ligados = rows.filter(r => r.situacao === 'Ligado').length;
+  const ligados = rows.filter(r => hostActivity(r) === 'ligado').length;
+  const desativados = rows.filter(r => hostActivity(r) === 'desativado').length;
   const eol = rows.filter(r => soRisk(r.versao_so) === 'eol').length;
+  const extended = rows.filter(r => soRisk(r.versao_so) === 'warn').length;
   const doms = new Set(rows.map(r => r.dominio).filter(Boolean)).size;
-  const components = new Set(rows.flatMap(r => r.componentes ?? [])).size;
-  const tecs = new Set(rows.flatMap(r => r.tecnologias ?? [])).size;
   const cell = (n, l) => `<div class="rp-kpi"><div class="rp-kpi-n">${n}</div><div class="rp-kpi-l">${l}</div></div>`;
-  return cell(total, 'Hosts') + cell(ligados, 'Ligados') + cell(doms, 'Domínios')
-    + cell(components, 'Componentes') + cell(tecs, 'Tecnologias') + cell(eol, 'SO fora de suporte');
+  return cell(total, 'Hosts') + cell(ligados, 'Ligados') + cell(desativados, 'Desativados')
+    + cell(doms, 'Domínios') + cell(eol, 'SO fora de suporte') + cell(extended, 'Suporte estendido');
 }
 
 function tableHtml(rows) {
@@ -71,13 +71,14 @@ function tableHtml(rows) {
       <td>${escapeHtml((r.tecnologias ?? []).join(', ') || '—')}</td>
       <td class="rp-mono">${escapeHtml((r.versoes_weblogic ?? []).join(', ') || '—')}</td>
       <td>${badge(r.versao_so, soCls[soRisk(r.versao_so)])}</td>
+      <td>${badge(soRiskLabel(soRisk(r.versao_so)), soCls[soRisk(r.versao_so)])}</td>
       <td class="rp-mono">${escapeHtml(r.versao_java ?? '—')}</td>
       <td>${escapeHtml(r.ambiente ?? '—')}</td>
       <td>${badge(r.situacao, situacaoBadge(r.situacao).replace('badge-', 'rp-s-'))}</td>
     </tr>`).join('');
   return `<table class="rp-table">
     <thead><tr><th>Hostname</th><th>Time</th><th>Domínio</th><th>Vertical</th><th>Componentes</th>
-    <th>Tecnologias</th><th>WebLogic</th><th>SO</th><th>Java</th><th>Ambiente</th><th>Situação</th></tr></thead>
+    <th>Tecnologias</th><th>WebLogic</th><th>SO</th><th>Saúde SO</th><th>Java</th><th>Ambiente</th><th>Situação</th></tr></thead>
     <tbody>${body}</tbody></table>`;
 }
 
@@ -110,7 +111,7 @@ const REPORT_CSS = `
 
 function buildReport(rows) {
   const filtros = describeFilters();
-  const charts = getChartImages(); // [{ title, dataUrl }]
+  const charts = getExploreChartImages(); // gráficos da visão filtrada
   const wrap = document.createElement('div');
   wrap.style.cssText = 'position: fixed; left: -12000px; top: 0; z-index: -1;';
   wrap.innerHTML = `
