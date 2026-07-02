@@ -1,181 +1,304 @@
-# Inventário de Hosts — ECER & DCPER
+# Inventário de Hosts — Dashboard, Exploração e Topologia
 
-Aplicação web para consulta, gestão e análise do inventário de servidores de produção, substituindo a planilha Excel por um dashboard interativo com banco de dados Supabase.
+Aplicação estática para consulta e gestão do inventário de servidores, integrada ao Supabase. A versão 4 adiciona componentes por domínio, vertical de negócio, versões WebLogic, topologia visual e administração de associações pendentes sem recriar o banco existente.
 
-**Stack:** HTML + CSS + JavaScript puro (ES Modules) · Supabase (PostgreSQL + Auth + RLS) · Chart.js · GitHub Pages. Sem build, sem framework, sem dependência de Node.
-
----
-
-## Arquitetura
-
-```
-┌─────────────────────────────┐        ┌──────────────────────────────┐
-│  GitHub Pages (estático)    │        │  Supabase                    │
-│  index.html + src/          │──────▶ │  PostgreSQL (hosts, lookups) │
-│  supabase-js via CDN        │  HTTPS │  Auth (e-mail/senha)         │
-│  Chart.js via CDN           │        │  RLS (segurança no banco)    │
-└─────────────────────────────┘        └──────────────────────────────┘
-```
-
-- **Leitura pública**: qualquer visitante consulta o inventário (RLS `select using (true)`).
-- **Escrita protegida**: apenas usuários autenticados com papel `editor` ou `admin` inserem/editam; **delete** somente `admin`. A segurança é garantida pelas políticas RLS no banco — a chave `anon` no frontend é pública por design.
-- **Modo demo**: enquanto o Supabase não estiver configurado, a aplicação carrega `data/hosts.json` (dados extraídos da planilha) em modo somente leitura. Você pode publicar no GitHub Pages imediatamente.
-
-### Modelo de dados
-
-```
-times ─┐
-dominios ─┤
-negocios ─┼──▶ hosts ◀──▶ host_tecnologias ◀── tecnologias
-           │      │
-           │      └── trigger atualizado_em
-profiles (auth.users) — roles: viewer | editor | admin
-hosts_view — view com joins prontos para o frontend
-```
-
-O relacionamento N:N `host_tecnologias` existe porque hosts reais da planilha têm múltiplas tecnologias (ex.: `Oracle_SOA, Oracle_BAM, Oracle_OSB`).
+**Stack preservada:** HTML, CSS e JavaScript ES Modules · Supabase/PostgreSQL/Auth/RLS · Chart.js · GitHub Pages. Não há dependências de runtime no npm.
 
 ---
 
-## Estrutura de pastas
+## Arquitetura adotada
 
+```text
+GitHub Pages
+├── Dashboard executivo
+├── Exploração e CRUD de hosts
+├── Topologia domínio → componentes → hosts do domínio
+└── Administração de associações pendentes
+              │
+              ▼
+Supabase
+├── hosts / dominios / tecnologias / negocios / times (existentes)
+├── verticais_negocio
+├── componentes
+├── componente_tecnologias
+├── componente_hosts (associação explícita futura/manual)
+└── domain_component_imports (staging, auditoria e pendências)
 ```
-├── index.html
-├── data/
-│   └── hosts.json              # dados para o modo demo (527 hosts)
-├── database/
-│   ├── schema.sql              # tabelas, índices, triggers, view, RLS
-│   └── seed.sql                # carga inicial gerada da planilha
-├── scripts/
-│   └── import_xlsx.py          # regenera hosts.json + seed.sql da planilha
-└── src/
-    ├── app.js                  # orquestrador
-    ├── config/supabase.js      # URL + anon key (preencher)
-    ├── services/
-    │   ├── api.js              # camada de dados (Supabase / demo)
-    │   └── auth.js             # Supabase Auth + roles
-    ├── components/
-    │   ├── dashboard.js        # KPIs + gráficos
-    │   ├── table.js            # tabela com ordenação/paginação
-    │   ├── filters.js          # filtros e busca
-    │   └── hostForm.js         # modal de cadastro/edição
-    ├── styles/main.css         # identidade Sicredi
-    └── utils/helpers.js        # CSV, EOL, debounce
-```
+
+A navegação usa rotas com hash (`#/dashboard`, `#/explorar`, `#/topologia` e `#/admin`), evitando erro 404 ao atualizar a página no GitHub Pages.
+
+### Decisão sobre hosts por componente
+
+A planilha `Componentes.xlsx` não possui uma coluna de hostname; ela informa apenas `Quantidade de hosts `. Para não criar relações falsas:
+
+- cada componente é relacionado ao domínio;
+- a quantidade declarada é preservada no componente;
+- a topologia apresenta os hosts já vinculados ao domínio;
+- a tabela `componente_hosts` fica pronta para associações explícitas futuras;
+- a interface informa quando a lista de hosts é herdada do domínio.
+
+A análise completa está em [`docs/PLANILHA_COMPONENTES_ANALISE.md`](docs/PLANILHA_COMPONENTES_ANALISE.md).
 
 ---
 
-## Rodando localmente
+## Aplicação
 
-Como usa ES Modules, precisa de um servidor HTTP (não abrir via `file://`):
+### Dashboard executivo
+
+A primeira página contém somente indicadores e gráficos reais:
+
+- hosts, domínios, componentes, tecnologias, pendências e incompletude;
+- domínios por vertical;
+- componentes e hosts por domínio;
+- tecnologias mais utilizadas;
+- versões WebLogic, Java e sistema operacional;
+- famílias de sistema operacional.
+
+Os gráficos são clicáveis e abrem a exploração com o filtro correspondente.
+
+### Explorar inventário
+
+Preserva o CRUD existente e adiciona filtros por:
+
+- domínio, componente, host, tecnologia e vertical;
+- versão WebLogic, Java e sistema operacional;
+- família do sistema operacional, ambiente, time e situação.
+
+A busca global cobre todos esses campos. CSV, PNG e PDF respeitam os filtros atuais.
+
+### Topologia
+
+Cada domínio apresenta:
+
+- vertical de negócio;
+- total de componentes e hosts;
+- tecnologias e versões WebLogic;
+- status de completude;
+- componentes expansíveis e hosts do domínio;
+- detalhes de ambiente, Java e sistema operacional.
+
+A visualização usa acordeões e agrupamentos, evitando renderizar centenas de ícones repetidos.
+
+### Administração
+
+Visível somente para `admin`. Exibe os domínios importados sem correspondência segura e permite associar todos os componentes do mesmo domínio de origem a um domínio existente. A operação chama uma RPC protegida por role no banco.
+
+---
+
+## Banco de dados existente
+
+### Ordem de execução
+
+No **SQL Editor do Supabase**, execute nesta ordem:
+
+1. `database/migrations/002_add_domain_components.sql`
+2. `database/imports/002_components_from_planilha.sql`
+
+Não execute novamente `schema.sql` nem `seed.sql` no ambiente já configurado.
+
+### O que a migration faz
+
+- preserva hosts, usuários, roles, lookups e policies existentes;
+- adiciona normalização ao cadastro de domínios;
+- cria verticais, componentes e relacionamentos;
+- cria staging/auditoria de importação;
+- adiciona índices e triggers;
+- atualiza `hosts_view` de forma compatível, acrescentando `vertical_negocio`;
+- cria `componentes_view`, `domain_summary_view` e o resumo público de qualidade `import_quality_summary_view`;
+- adiciona RLS para viewer/editor/admin;
+- não usa `drop table` na migration de instalação.
+
+### Validação após a migration/importação
+
+```sql
+select count(*) as componentes from public.componentes;
+
+select status, count(*)
+from public.domain_component_imports
+group by status
+order by status;
+
+select *
+from public.domain_summary_view
+order by total_componentes desc
+limit 20;
+```
+
+Com o inventário anexado, a análise local encontrou 515 linhas, 477 correspondências automáticas e 38 registros pendentes. Após o upsert e a remoção de repetições exatas, são 458 componentes associados distintos; os pendentes estão distribuídos em nove domínios ausentes no inventário atual.
+
+### Rollback somente da migration 002
+
+Use apenas se realmente precisar remover a evolução:
+
+```text
+database/migrations/002_add_domain_components_rollback.sql
+```
+
+O rollback remove as tabelas e dados novos de componentes/importação, mas preserva hosts, usuários, times, tecnologias e negócios. Faça backup antes de executar.
+
+---
+
+## Importação da planilha
+
+O arquivo já gerado para a planilha anexada é:
+
+```text
+database/imports/002_components_from_planilha.sql
+```
+
+Ele é idempotente:
+
+- `source_key` evita duplicar linhas da mesma origem;
+- componente usa upsert por domínio + nome normalizado + versão WebLogic;
+- reprocessamento atualiza dados declarados sem duplicar componentes;
+- domínios sem correspondência permanecem em `domain_component_imports`.
+
+### Gerar novamente após atualizar a planilha
+
+O script não conecta ao Supabase, não usa `service_role` e usa apenas a biblioteca padrão do Python:
 
 ```bash
-# opção 1
+python3 scripts/import_components.py "imports/Componentes.xlsx" \
+  --hosts-json data/hosts.json \
+  --sql-out database/imports/002_components_from_planilha.sql \
+  --json-out data/components.json \
+  --report-out docs/PLANILHA_COMPONENTES_ANALISE.md
+```
+
+Depois, execute novamente o SQL gerado no SQL Editor. O JSON atualiza o modo demo publicado no GitHub Pages.
+
+### Normalização de domínio
+
+A associação automática:
+
+- remove espaços no início/fim;
+- ignora caixa e acentos;
+- trata espaço, hífen, ponto e underscore como equivalentes;
+- não usa fuzzy matching;
+- só associa quando existe exatamente um domínio com a forma normalizada.
+
+Exemplos equivalentes:
+
+```text
+bureau_domain
+BUREAU-DOMAIN
+bureau.domain
+bureau domain
+```
+
+### Consultar pendências
+
+```sql
+select id, source_domain, component_name, weblogic_version, error_message
+from public.domain_component_imports
+where status <> 'matched'
+order by source_domain, source_row;
+```
+
+Também é possível resolvê-las pela página **Administração**, usando uma conta com role `admin`.
+
+---
+
+## Segurança e permissões
+
+- `viewer`: leitura;
+- `editor`: inserir e atualizar hosts, componentes e associações;
+- `admin`: tudo do editor, exclusões e associação manual de importações.
+
+A interface esconde ações sem permissão, mas a proteção real está nas policies RLS e na função `associate_component_import`.
+
+A chave `service_role` não é usada no frontend nem é necessária para o processo fornecido. O frontend utiliza somente URL e chave `anon` em `src/config/supabase.js`.
+
+---
+
+## Rodar localmente
+
+```bash
 python3 -m http.server 8000
-# opção 2
-npx serve .
 ```
 
-Acesse `http://localhost:8000`. Sem Supabase configurado, sobe em **modo demo** com os dados da planilha.
+Acesse `http://localhost:8000`. Sem Supabase configurado, a aplicação usa:
+
+- `data/hosts.json`
+- `data/components.json`
+
+O modo demo é somente leitura.
 
 ---
 
-## Configurando o Supabase
+## Build e testes
 
-1. Crie um projeto em [supabase.com](https://supabase.com) (plano free atende).
-2. No **SQL Editor**, execute `database/schema.sql` (uma vez).
-3. Em seguida execute `database/seed.sql` (importa os 527 hosts da planilha).
-4. Em **Settings → API**, copie a `Project URL` e a chave `anon public`.
-5. Preencha `src/config/supabase.js`:
-   ```js
-   export const SUPABASE_URL = 'https://xxxxx.supabase.co';
-   export const SUPABASE_ANON_KEY = 'eyJhbGciOi...';
-   ```
-6. Em **Authentication → Providers**, mantenha Email habilitado.
-7. Crie sua conta pelo botão **Entrar → Criar conta** na aplicação (ou pelo painel do Supabase) e promova-se a admin no SQL Editor:
-   ```sql
-   update public.profiles set role = 'admin' where email = 'seu@email.com';
-   ```
-8. Novos usuários nascem como `viewer` (somente leitura). Um admin libera edição:
-   ```sql
-   update public.profiles set role = 'editor' where email = 'colega@sicredi.com.br';
-   ```
-
-> **Segurança**: nunca commit a `service_role` key. A `anon` key pode ir para o repositório — todas as regras de escrita vivem nas políticas RLS do banco.
-
----
-
-## Publicando no GitHub Pages
+O projeto continua estático, mas agora possui uma validação de build sem dependências externas:
 
 ```bash
-git init
-git add .
-git commit -m "Inventário de hosts — versão inicial"
-git branch -M main
-git remote add origin git@github.com:SEU_USUARIO/inventario-hosts.git
-git push -u origin main
+npm test
+npm run build
 ```
 
-No GitHub: **Settings → Pages → Source: Deploy from a branch → main / (root)**. Em ~1 minuto a aplicação estará em `https://SEU_USUARIO.github.io/inventario-hosts/`.
+`npm run build`:
 
-Não há etapa de build — todo push na `main` já publica.
-
----
-
-## Reimportando a planilha
-
-Se a planilha for atualizada e você quiser regerar os dados:
-
-```bash
-pip install pandas openpyxl
-python scripts/import_xlsx.py "ECER_e_DCPER_-_Inventário_de_máquinas__produção_.xlsx"
-```
-
-O script regenera `data/hosts.json` (demo) e `database/seed.sql`. Para recarregar no Supabase em uma base já populada, o seed usa `on conflict do nothing` — hosts novos entram, existentes são preservados.
+- valida a sintaxe de todos os módulos JavaScript;
+- verifica imports locais;
+- verifica referências essenciais do HTML;
+- gera `dist/` pronto para publicação.
 
 ---
 
-## Funcionalidades
+## GitHub Pages
 
-- Dashboard com KPIs: total de hosts, ligados, domínios, tecnologias e **alertas de EOL** (RHEL ≤6/CentOS fora de suporte; RHEL 7 em ELS até 2029)
-- Gráficos: hosts por tecnologia, por versão de SO, por família de SO, top domínios
-- Filtros combináveis: time, tecnologia, domínio, versão SO, família SO, Java, situação + busca por hostname
-- Tabela com ordenação por coluna, paginação e badges de risco EOL
-- CRUD de hosts com validação (hostname único case-insensitive, formato validado)
-- Cadastro implícito de domínio/negócio/tecnologia ao salvar um host (upsert por nome)
-- Exportação do resultado filtrado em CSV (separador `;` + BOM, abre certo no Excel)
-- Autenticação Supabase com papéis viewer/editor/admin
+A opção mais simples continua sendo publicar a raiz da branch `main`. As rotas usam `HashRouter` manual, então atualizar `#/topologia` ou `#/explorar` não gera 404.
+
+Também é possível publicar a pasta `dist/` gerada pelo build em um workflow de Pages.
 
 ---
 
-## Evolução futura
+## Testes funcionais recomendados
 
-Ideias já suportadas pela arquitetura:
-
-1. **Ambientes NPROD/HOM** — o campo `ambiente` já existe; basta importar as abas de não-produção.
-2. **Tabela de EOL dinâmica** — mover as datas da aba "EOL RHEL" para uma tabela `eol_referencia` e calcular o risco no banco em vez de hardcode no frontend.
-3. **Pontos de montagem** — nova tabela `pontos_montagem (host_id, servidor_remoto, compartilhamento, ponto_local, situacao)` replicando as abas de montagem.
-4. **Histórico/auditoria** — tabela `hosts_historico` populada por trigger para rastrear quem alterou o quê (compliance).
-5. **Coleta automática** — job (GitHub Actions ou Rundeck) que consulta Ansible/Satellite/Dynatrace e faz upsert via API do Supabase, eliminando atualização manual.
-6. **Dashboards por time no Grafana** — o PostgreSQL do Supabase pode ser plugado como datasource direto no Grafana.
-7. **SSO corporativo** — Supabase Auth suporta SAML/OIDC (Azure AD) nos planos pagos.
+1. **Domínio exato:** importe `bureau_domain` e confira o componente na topologia.
+2. **Maiúsculas/minúsculas:** teste `BUREAU_DOMAIN`.
+3. **Separadores:** teste `bureau-domain`, `bureau.domain` e `bureau domain`.
+4. **Sem correspondência:** confirme status `pending` e presença em Administração.
+5. **Vários componentes:** expanda um domínio com múltiplos componentes.
+6. **Vários hosts:** expanda um componente e confira os hosts do domínio.
+7. **Dashboard:** valide KPIs e todos os oito gráficos.
+8. **Navegação:** clique em uma barra de domínio e confirme o filtro em Explorar.
+9. **Topologia:** teste expansão de domínio, componente e abertura de host.
+10. **Permissões:** valide viewer, editor e admin.
+11. **Responsividade:** Safari no iPhone e Chrome no Android, retrato e paisagem.
+12. **GitHub Pages:** abra diretamente uma URL com `#/topologia` e atualize a página.
 
 ---
 
-## Changelog
+## Arquivos principais da versão 4
 
-### v2 — Mobile + visual premium
-- Layout mobile-first: tabela vira lista de cards no celular, modais viram bottom-sheet, filtros empilham, KPIs em 2 colunas
-- Alvos de toque ≥44px, inputs com 16px (elimina auto-zoom do Safari iOS), safe-area insets (notch), `overflow-x` eliminado
-- Fundo vivo em canvas: rede de nós conectados nas cores Sicredi — pausa com aba oculta, ~30fps, respeita `prefers-reduced-motion`, fallback em gradiente estático
-- Painéis com glassmorphism leve (`backdrop-filter` com fallback sólido via `@supports`)
-- Gráficos adaptados a telas estreitas (legenda embaixo, labels truncados, menos ticks)
-- **Bugfix**: `setupAuthUi()` não era chamado — o botão Entrar não abria o modal de login no modo Supabase
+### Criados
 
-### v3 — Dados, busca global e exportação
-- **Busca global** em todos os campos (hostname, domínio, tecnologia, SO, versão, Java, ambiente, situação, negócio, observação), case/acento-insensitive e tolerante a `_`, `-`, `.` e espaços — `bureau_domain` ≡ `BUREAU-DOMAIN` ≡ `bureau.domain`. Duas passadas: frase exata primeiro; fallback por tokens (termos em campos diferentes) só quando a frase não encontra nada
-- **Sanitização em memória** no carregamento (trim, colapso de espaços, dedupe de tecnologias) para ambos os modos — valores sujos não dividem mais contagens nem duplicam opções de filtro; o banco não é alterado
-- Filtro novo de **ambiente** e opção **"(não informado)"** em todos os selects (51 hosts DCPER sem situação agora são filtráveis)
-- Resumo `X de Y hosts` sempre visível + chip "✕ limpar tudo"
-- **Exportar visão atual em PNG/PDF**: relatório com cabeçalho, data/hora, filtros aplicados, KPIs, gráficos e todos os registros filtrados (sem paginação e sem botões de ação); bibliotecas carregadas sob demanda; nome do arquivo com data/hora + filtros
-- CSV com o mesmo padrão de nome; estado vazio com sugestão de limpar filtros; loading e toasts nas exportações
+- `database/migrations/002_add_domain_components.sql`
+- `database/migrations/002_add_domain_components_rollback.sql`
+- `database/imports/002_components_from_planilha.sql`
+- `data/components.json`
+- `docs/PLANILHA_COMPONENTES_ANALISE.md`
+- `scripts/import_components.py`
+- `imports/Componentes.xlsx`
+- `scripts/build.mjs`
+- `src/router.js`
+- `src/components/topology.js`
+- `src/components/admin.js`
+- `src/utils/technologyIcons.js`
+- `tests/normalization.test.mjs`
+- `tests/data.test.mjs`
+- `package.json`
+
+### Alterados
+
+- `index.html`
+- `README.md`
+- `src/app.js`
+- `src/services/api.js`
+- `src/services/auth.js`
+- `src/components/dashboard.js`
+- `src/components/export.js`
+- `src/components/filters.js`
+- `src/components/table.js`
+- `src/styles/main.css`
+- `src/utils/helpers.js`
