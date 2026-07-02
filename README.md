@@ -171,3 +171,11 @@ Ideias já suportadas pela arquitetura:
 - Painéis com glassmorphism leve (`backdrop-filter` com fallback sólido via `@supports`)
 - Gráficos adaptados a telas estreitas (legenda embaixo, labels truncados, menos ticks)
 - **Bugfix**: `setupAuthUi()` não era chamado — o botão Entrar não abria o modal de login no modo Supabase
+
+### v3 — Dados, busca global e exportação
+- **Busca global** em todos os campos (hostname, domínio, tecnologia, SO, versão, Java, ambiente, situação, negócio, observação), case/acento-insensitive e tolerante a `_`, `-`, `.` e espaços — `bureau_domain` ≡ `BUREAU-DOMAIN` ≡ `bureau.domain`. Duas passadas: frase exata primeiro; fallback por tokens (termos em campos diferentes) só quando a frase não encontra nada
+- **Sanitização em memória** no carregamento (trim, colapso de espaços, dedupe de tecnologias) para ambos os modos — valores sujos não dividem mais contagens nem duplicam opções de filtro; o banco não é alterado
+- Filtro novo de **ambiente** e opção **"(não informado)"** em todos os selects (51 hosts DCPER sem situação agora são filtráveis)
+- Resumo `X de Y hosts` sempre visível + chip "✕ limpar tudo"
+- **Exportar visão atual em PNG/PDF**: relatório com cabeçalho, data/hora, filtros aplicados, KPIs, gráficos e todos os registros filtrados (sem paginação e sem botões de ação); bibliotecas carregadas sob demanda; nome do arquivo com data/hora + filtros
+- CSV com o mesmo padrão de nome; estado vazio com sugestão de limpar filtros; loading e toasts nas exportações

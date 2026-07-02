@@ -27,6 +27,7 @@
       <div class="topbar-actions">
         <span id="mode-badge" class="mode-badge" title="Fonte de dados"></span>
         <button id="btn-export" class="btn btn-ghost" title="Exportar dados filtrados em CSV">⬇ CSV</button>
+        <button id="btn-print" class="btn btn-ghost" title="Gerar print (PNG/PDF) da visão atual">📷 Print</button>
         <button id="btn-add" class="btn btn-primary hidden">+ Novo host</button>
         <button id="btn-auth" class="btn btn-outline">Entrar</button>
       </div>
@@ -54,6 +55,7 @@
         <select id="f-dominio"><option value="">Domínio: todos</option></select>
         <select id="f-so"><option value="">Versão SO: todas</option></select>
         <select id="f-familia"><option value="">Família SO: todas</option></select>
+        <select id="f-ambiente"><option value="">Ambiente: todos</option></select>
         <select id="f-java"><option value="">Java: todas</option></select>
         <select id="f-situacao"><option value="">Situação: todas</option></select>
         <button id="btn-limpar" class="btn btn-ghost">Limpar</button>
@@ -119,6 +121,21 @@
       <div class="modal-foot">
         <button class="btn btn-ghost" data-close>Cancelar</button>
         <button id="btn-save-host" class="btn btn-primary">Salvar host</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: exportar visão atual -->
+  <div id="modal-print" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card modal-sm">
+      <div class="modal-head"><h2>Exportar visão atual</h2><button class="modal-close" data-close>×</button></div>
+      <div class="modal-body">
+        <p class="muted">Gera um relatório da visão atual (respeitando busca e filtros), incluindo indicadores, gráficos e <strong>todos</strong> os registros filtrados — não apenas a página visível.</p>
+        <p id="print-status" class="muted hidden">Gerando… isso pode levar alguns segundos.</p>
+      </div>
+      <div class="modal-foot">
+        <button id="btn-print-png" class="btn btn-primary">🖼 PNG</button>
+        <button id="btn-print-pdf" class="btn btn-primary">📄 PDF</button>
       </div>
     </div>
   </div>
