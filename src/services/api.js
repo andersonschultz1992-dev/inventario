@@ -3,6 +3,7 @@
 // A UI só conversa com este módulo.
 // ============================================================
 import { SUPABASE_URL, SUPABASE_ANON_KEY, isConfigured } from '../config/supabase.js';
+import { sanitizeHost } from '../utils/helpers.js';
 
 let supabase = null;
 let demoHosts = null;
@@ -26,13 +27,15 @@ export function getClient() { return supabase; }
 // ---------- Leitura ----------
 
 export async function fetchHosts() {
-  if (MODE === 'demo') return [...demoHosts];
+  // Normalização em memória: trim, colapso de espaços, dedupe de tecnologias
+  // e haystack de busca (_hay). Não altera os dados originais no banco.
+  if (MODE === 'demo') return demoHosts.map(sanitizeHost);
   const { data, error } = await supabase
     .from('hosts_view')
     .select('*')
     .order('hostname');
   if (error) throw error;
-  return data;
+  return data.map(sanitizeHost);
 }
 
 export async function fetchLookups() {

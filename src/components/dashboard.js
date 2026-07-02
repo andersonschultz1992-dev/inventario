@@ -8,6 +8,20 @@ const PALETTE = ['#3FA110', '#146E37', '#7CC24E', '#FFCD00', '#A9D18E', '#57B52A
 
 const charts = {};
 
+const CHART_TITLES = {
+  'chart-tec': 'Hosts por tecnologia',
+  'chart-so': 'Hosts por versão de SO',
+  'chart-familia': 'Por família de SO',
+  'chart-dom': 'Top 10 domínios',
+};
+
+// Exporta os gráficos atuais como imagens base64 (usado pelo print/PDF)
+export function getChartImages() {
+  return Object.entries(charts)
+    .filter(([, c]) => c)
+    .map(([id, c]) => ({ title: CHART_TITLES[id] ?? id, dataUrl: c.toBase64Image('image/png', 1) }));
+}
+
 function makeChart(id, type, labels, values, opts = {}) {
   const ctx = document.getElementById(id);
   const mobile = window.matchMedia('(max-width: 640px)').matches;

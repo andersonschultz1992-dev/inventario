@@ -50,8 +50,21 @@ export function renderTable(rows, { editable, deletable }) {
     return `<span class="badge ${cls}" title="${soRisk(v) === 'eol' ? 'Fora de suporte' : soRisk(v) === 'warn' ? 'Extended Life-cycle Support' : 'Suportado'}">${escapeHtml(v)}</span>`;
   };
 
+  const tbody = document.getElementById('hosts-tbody');
+  if (!slice.length) {
+    tbody.innerHTML = `
+      <tr class="empty-row"><td colspan="9">
+        <div class="empty-state">
+          <div class="empty-icon">🔎</div>
+          <p><strong>Nenhum host encontrado.</strong></p>
+          <p class="muted">Ajuste o termo de busca ou <button type="button" class="link-btn" id="empty-limpar">limpe os filtros</button> para ver o inventário completo.</p>
+        </div>
+      </td></tr>`;
+    document.getElementById('empty-limpar')?.addEventListener('click', () =>
+      document.dispatchEvent(new CustomEvent('filters:clear')));
+  } else {
   // data-label alimenta o modo "cards" no mobile (CSS ::before)
-  document.getElementById('hosts-tbody').innerHTML = slice.map(r => `
+  tbody.innerHTML = slice.map(r => `
     <tr data-id="${r.id}">
       <td class="mono cell-host"><strong>${escapeHtml(r.hostname)}</strong></td>
       <td data-label="Time"><span class="badge badge-neutral">${escapeHtml(r.time ?? '—')}</span></td>
@@ -68,8 +81,9 @@ export function renderTable(rows, { editable, deletable }) {
         </div>
       </td>
     </tr>`).join('');
+  }
 
-  document.getElementById('hosts-tbody').querySelectorAll('button[data-act]').forEach(btn => {
+  tbody.querySelectorAll('button[data-act]').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const b = e.target.closest('button[data-act]');
       const id = Number(b.closest('tr').dataset.id);
