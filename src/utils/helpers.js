@@ -114,33 +114,51 @@ export function buildDomainTopology(hosts, components) {
         key,
         dominio: name || '(sem domínio)',
         vertical_negocio: null,
-        hosts: [],
-        components: [],
+        hostMap: new Map(),
+        componentMap: new Map(),
       });
     }
     return domains.get(key);
   };
+
+  // Hosts e componentes são filhos independentes do domínio. Os mapas também
+  // protegem a topologia contra registros duplicados vindos da consulta.
   for (const host of hosts) {
     const domain = ensure(host.dominio);
-    domain.hosts.push(host);
+    const hostKey = host.id != null ? `id:${host.id}` : `hostname:${normText(host.hostname)}`;
+    if (!domain.hostMap.has(hostKey)) domain.hostMap.set(hostKey, host);
     domain.vertical_negocio ||= host.vertical_negocio;
   }
   for (const component of components) {
     const domain = ensure(component.dominio ?? component.source_domain);
-    domain.components.push(component);
+    const componentKey = component.id != null
+      ? `id:${component.id}`
+      : `component:${normText(component.nome)}:${normText(component.versao_weblogic)}`;
+    if (!domain.componentMap.has(componentKey)) domain.componentMap.set(componentKey, component);
     domain.vertical_negocio ||= component.vertical_negocio;
   }
+
   return [...domains.values()]
-    .map(domain => ({
-      ...domain,
-      technologies: [...new Set([
-        ...domain.hosts.flatMap(h => h.tecnologias ?? []),
-        ...domain.components.flatMap(c => c.tecnologias ?? []),
-      ])].sort(),
-      weblogicVersions: [...new Set(domain.components.map(c => c.versao_weblogic).filter(Boolean))].sort(),
-      incomplete: !domain.vertical_negocio || !domain.hosts.length || !domain.components.length,
-      status: domain.hosts.length && domain.components.length ? 'completo' : 'incompleto',
-    }))
+    .map(domain => {
+      const hosts = [...domain.hostMap.values()]
+        .sort((a, b) => String(a.hostname ?? '').localeCompare(String(b.hostname ?? ''), 'pt-BR'));
+      const components = [...domain.componentMap.values()]
+        .sort((a, b) => String(a.nome ?? '').localeCompare(String(b.nome ?? ''), 'pt-BR'));
+      return {
+        key: domain.key,
+        dominio: domain.dominio,
+        vertical_negocio: domain.vertical_negocio,
+        hosts,
+        components,
+        technologies: [...new Set([
+          ...hosts.flatMap(h => h.tecnologias ?? []),
+          ...components.flatMap(c => c.tecnologias ?? []),
+        ])].sort(),
+        weblogicVersions: [...new Set(components.map(c => c.versao_weblogic).filter(Boolean))].sort(),
+        incomplete: !domain.vertical_negocio || !hosts.length || !components.length,
+        status: hosts.length && components.length ? 'completo' : 'incompleto',
+      };
+    })
     .sort((a, b) => b.hosts.length - a.hosts.length || a.dominio.localeCompare(b.dominio, 'pt-BR'));
 }
 
